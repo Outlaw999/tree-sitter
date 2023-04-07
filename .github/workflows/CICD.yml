@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
   pull_request:
   push:
-    branches:
-      - master
-      - check/*
+    branches-ignore:
+      - release/*
 
 concurrency:
   group: '${{ github.workflow }} @ ${{ github.event.pull_request.head.label || github.head_ref || github.ref }}'
