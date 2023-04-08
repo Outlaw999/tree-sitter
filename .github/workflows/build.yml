@@ -29,6 +29,7 @@ jobs:
         - windows-x86   #
         - macos-arm64   # MacOS M1/M2 - no tests, only CLI build to be published on release artifacts
         - macos-x64     #
+
         include:
         - { name: linux-aarch64 , target: aarch64-unknown-linux-gnu   , os: ubuntu-latest  , use-cross: true }
         - { name: linux-arm     , target: arm-unknown-linux-gnueabihf , os: ubuntu-latest  , use-cross: true }
@@ -39,13 +40,14 @@ jobs:
         - { name: macos-arm64   , target: aarch64-apple-darwin        , os: macos-latest                     }
         - { name: macos-x64     , target: x86_64-apple-darwin         , os: macos-latest                     }
 
-        # Extras
+        # Cross compilers for C library
         - { name: linux-aarch64 , cc: aarch64-linux-gnu-gcc           , ar: i686-linux-gnu-ar                  }
         - { name: linux-arm     , cc: arm-unknown-linux-gnueabihf-gcc , ar: arm-unknown-linux-gnueabihf-gcc-ar }
         - { name: linux-x86     , cc: i686-linux-gnu-gcc              , ar: i686-linux-gnu-ar                  }
 
-        - { name: windows-x64   , test_thread: 1 }
-        - { name: windows-x86   , test_thread: 1 }
+        # See #2041 tree-sitter issue
+        - { name: windows-x64   , rust_test_threads: 1 }
+        - { name: windows-x86   , rust_test_threads: 1 }
 
     env:
       BUILD_CMD: cargo
@@ -103,6 +105,11 @@ jobs:
         cd -
 
     - name: Setup extra env
+      env:
+        RUST_TEST_THREADS: ${{ matrix.rust_test_threads }}
+        USE_CROSS: ${{ matrix.use-cross }}
+        CC: ${{ matrix.cc }}
+        AR: ${{ matrix.ar }}
       run: |
         PATH="$PWD/.github/scripts:$PATH"
         echo "PATH=$PATH" >> $GITHUB_ENV
@@ -112,32 +119,18 @@ jobs:
         export TARGET=${{ matrix.target }}
         echo "TARGET=$TARGET" >> $GITHUB_ENV
 
-        USE_CROSS="${{ matrix.use-cross }}"
+        [ -n "$RUST_TEST_THREADS" ] && \
+        echo "RUST_TEST_THREADS=$RUST_TEST_THREADS" >> $GITHUB_ENV
+
+        [ -n "$CC" ] && echo "CC=$CC" >> $GITHUB_ENV
+        [ -n "$AR" ] && echo "AR=$AR" >> $GITHUB_ENV
 
         if [ "$USE_CROSS" == "true" ]; then
           echo "BUILD_CMD=cross" >> $GITHUB_ENV
-
-          export CROSS=1; echo "CROSS=$CROSS" >> $GITHUB_ENV
-
+          export CROSS=1; echo "CROSS=1" >> $GITHUB_ENV
           runner=$(cross.sh bash -c "env | sed -nr '/^CARGO_TARGET_.*_RUNNER=/s///p'")
           [ -n "$runner" ] && echo "CROSS_RUNNER=$runner" >> $GITHUB_ENV
-          echo "runner: $runner"
-
-          case "$TARGET" in
-            i686-unknown-linux-gnu)      CC=i686-linux-gnu-gcc              AR=i686-linux-gnu-ar                  ;;
-            aarch64-unknown-linux-gnu)   CC=aarch64-linux-gnu-gcc           AR=aarch64-linux-gnu-ar               ;;
-            arm-unknown-linux-gnueabihf) CC=arm-unknown-linux-gnueabihf-gcc AR=arm-unknown-linux-gnueabihf-gcc-ar ;;
-          esac
-
-          [ -n "$CC" ] && echo "CC=$CC" >> $GITHUB_ENV
-          [ -n "$AR" ] && echo "AR=$AR" >> $GITHUB_ENV
         fi
-
-        case "$TARGET" in
-          *-windows-*)
-            echo "RUST_TEST_THREADS=1" >> $GITHUB_ENV # See #2041 tree-sitter issue
-            ;;
-        esac
 
     - name: Build C library
       if: ${{ !contains(matrix.os, 'windows') }} # Requires an additional adapted Makefile for `cl.exe` compiler
