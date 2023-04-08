@@ -30,6 +30,14 @@ jobs:
           - { name: macos-arm64   , target: aarch64-apple-darwin        , os: macos-latest                     }
           - { name: macos-x64     , target: x86_64-apple-darwin         , os: macos-latest                     }
 
+          # Extras
+          - { name: linux-aarch64 , cc: aarch64-linux-gnu-gcc           , ar: i686-linux-gnu-ar                  }
+          - { name: linux-arm     , cc: arm-unknown-linux-gnueabihf-gcc , ar: arm-unknown-linux-gnueabihf-gcc-ar }
+          - { name: linux-x86     , cc: i686-linux-gnu-gcc              , ar: i686-linux-gnu-ar                  }
+
+          - { name: windows-x64   , test_thread: 1 }
+          - { name: windows-x86   , test_thread: 1 }
+
     env:
       BUILD_CMD: cargo
 
