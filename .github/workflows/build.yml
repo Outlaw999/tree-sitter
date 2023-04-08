@@ -25,9 +25,9 @@ jobs:
         - linux-arm     #
         - linux-x64     #
         - linux-x86     #
-        - windows-x64   #
-        - windows-x86   #
-        - macos-arm64   # MacOS M1/M2 - no tests, only CLI build to be published on release artifacts
+        - windows-x64   # <-- No C library build - requires an additional adapted Makefile for `cl.exe` compiler
+        - windows-x86   #     -- // --
+        - macos-arm64   # <-- MacOS M1/M2 - no tests, only CLI build to be published on release artifacts
         - macos-x64     #
 
         include:
@@ -41,7 +41,7 @@ jobs:
         - { name: macos-x64     , target: x86_64-apple-darwin         , os: macos-latest                     }
 
         # Cross compilers for C library
-        - { name: linux-aarch64 , cc: aarch64-linux-gnu-gcc           , ar: i686-linux-gnu-ar                  }
+        - { name: linux-aarch64 , cc: aarch64-linux-gnu-gcc           , ar: aarch64-linux-gnu-ar               }
         - { name: linux-arm     , cc: arm-unknown-linux-gnueabihf-gcc , ar: arm-unknown-linux-gnueabihf-gcc-ar }
         - { name: linux-x86     , cc: i686-linux-gnu-gcc              , ar: i686-linux-gnu-ar                  }
 
@@ -104,7 +104,7 @@ jobs:
 
         cd -
 
-    - name: Setup extra env
+    - name: Setup env extras
       env:
         RUST_TEST_THREADS: ${{ matrix.rust_test_threads }}
         USE_CROSS: ${{ matrix.use-cross }}
