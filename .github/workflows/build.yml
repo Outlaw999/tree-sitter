@@ -15,12 +15,12 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.job.name }} (${{ matrix.job.target }}) (${{ matrix.job.os }})
-    runs-on: ${{ matrix.job.os }}
+    name: ${{ matrix.name }} (${{ matrix.target }}) (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        job:
+        include:
           - { name: linux-aarch64 , target: aarch64-unknown-linux-gnu   , os: ubuntu-latest  , use-cross: true }
           - { name: linux-arm     , target: arm-unknown-linux-gnueabihf , os: ubuntu-latest  , use-cross: true }
           - { name: linux-x64     , target: x86_64-unknown-linux-gnu    , os: ubuntu-latest                    }
@@ -55,20 +55,20 @@ jobs:
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
       with:
-        targets: ${{ matrix.job.target }}
+        targets: ${{ matrix.target }}
 
     - name: Install cross
-      if: matrix.job.use-cross
+      if: matrix.use-cross
       uses: taiki-e/install-action@v2
       with:
         tool: cross
 
     - name: Build custom cross image
-      if: ${{ matrix.job.use-cross && matrix.job.os == 'ubuntu-latest' }}
+      if: ${{ matrix.use-cross && matrix.os == 'ubuntu-latest' }}
       run: |
         cd ..
 
-        target="${{ matrix.job.target }}"
+        target="${{ matrix.target }}"
         image=ghcr.io/cross-rs/$target:custom
         echo "CROSS_IMAGE=$image"                                  >> $GITHUB_ENV
 
@@ -92,10 +92,10 @@ jobs:
         echo "ROOT=$PWD" >> $GITHUB_ENV
         echo "TREE_SITTER=tree-sitter.sh" >> $GITHUB_ENV
 
-        export TARGET=${{ matrix.job.target }}
+        export TARGET=${{ matrix.target }}
         echo "TARGET=$TARGET" >> $GITHUB_ENV
 
-        USE_CROSS="${{ matrix.job.use-cross }}"
+        USE_CROSS="${{ matrix.use-cross }}"
 
         if [ "$USE_CROSS" == "true" ]; then
           echo "BUILD_CMD=cross" >> $GITHUB_ENV
@@ -123,50 +123,50 @@ jobs:
         esac
 
     - name: Build C library
-      if: ${{ !contains(matrix.job.os, 'windows') }} # Requires an additional adapted Makefile for `cl.exe` compiler
+      if: ${{ !contains(matrix.os, 'windows') }} # Requires an additional adapted Makefile for `cl.exe` compiler
       run: make.sh CFLAGS="-Werror" -j
 
     - name: Build wasm library
-      if: ${{ !matrix.job.use-cross && matrix.job.name != 'macos-arm64' }} # Not used
+      if: ${{ !matrix.use-cross && matrix.name != 'macos-arm64' }} # Not used
       run: script/build-wasm
 
     - name: Build CLI
-      run: $BUILD_CMD build --release --target=${{ matrix.job.target }}
+      run: $BUILD_CMD build --release --target=${{ matrix.target }}
 
     - name: Fetch fixtures
-      if: ${{ matrix.job.name != 'macos-arm64' }} # Not used
+      if: ${{ matrix.name != 'macos-arm64' }} # Not used
       run: script/fetch-fixtures
 
     - name: Generate fixtures
-      if: ${{ matrix.job.name != 'macos-arm64' }} # Can't natively run CLI on runner's host
+      if: ${{ matrix.name != 'macos-arm64' }} # Can't natively run CLI on runner's host
       run: script/generate-fixtures
 
     - name: Generate WASM fixtures
-      if: ${{ !matrix.job.use-cross && matrix.job.name != 'macos-arm64' }} # Not used
+      if: ${{ !matrix.use-cross && matrix.name != 'macos-arm64' }} # Not used
       run: script/generate-fixtures-wasm
 
     - name: Run main tests
-      if: ${{ matrix.job.name != 'macos-arm64' }} # Can't natively run CLI on runner's host
-      run: $BUILD_CMD test --target=${{ matrix.job.target }}
+      if: ${{ matrix.name != 'macos-arm64' }} # Can't natively run CLI on runner's host
+      run: $BUILD_CMD test --target=${{ matrix.target }}
 
     - name: Run wasm tests
-      if: ${{ !matrix.job.use-cross && matrix.job.name != 'macos-arm64' }} # Not used
+      if: ${{ !matrix.use-cross && matrix.name != 'macos-arm64' }} # Not used
       run: script/test-wasm
 
     - name: Run benchmarks
-      if: ${{ !matrix.job.use-cross && matrix.job.name != 'macos-arm64' }} # Cross-compiled benchmarks make no sense
-      run: $BUILD_CMD bench benchmark -p tree-sitter-cli --target=${{ matrix.job.target }}
+      if: ${{ !matrix.use-cross && matrix.name != 'macos-arm64' }} # Cross-compiled benchmarks make no sense
+      run: $BUILD_CMD bench benchmark -p tree-sitter-cli --target=${{ matrix.target }}
 
     - name: Upload CLI artifact
       uses: actions/upload-artifact@v3
       with:
-        name: tree-sitter.${{ matrix.job.name }}
-        path: target/${{ matrix.job.target }}/release/tree-sitter${{ contains(matrix.job.target, 'windows') && '.exe' || '' }}
+        name: tree-sitter.${{ matrix.name }}
+        path: target/${{ matrix.target }}/release/tree-sitter${{ contains(matrix.target, 'windows') && '.exe' || '' }}
         if-no-files-found: error
         retention-days: 7
 
     - name: Upload WASM artifacts
-      if: ${{ matrix.job.name == 'linux-x64' }}
+      if: ${{ matrix.name == 'linux-x64' }}
       uses: actions/upload-artifact@v3
       with:
         name: tree-sitter.wasm
