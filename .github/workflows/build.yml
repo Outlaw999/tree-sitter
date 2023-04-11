@@ -141,6 +141,17 @@ jobs:
           [ -n "$runner" ] && echo "CROSS_RUNNER=$runner" >> $GITHUB_ENV
         fi
 
+    - name: Locate Node
+      run: |
+        set -x
+        set +e
+
+        echo -n "$PATH" | tr : \\n
+
+        echo -n "$PATH" | tr : \\0 | xargs -0 bash -c 'find "$@" -maxdepth 1 \( -type l -o -type f \) -iname "*node*"' - 2>/dev/null
+
+        node --version
+
     - name: Build C library
       if: ${{ !contains(matrix.os, 'windows') }} # Requires an additional adapted Makefile for `cl.exe` compiler
       run: make.sh CFLAGS="-Werror" -j
