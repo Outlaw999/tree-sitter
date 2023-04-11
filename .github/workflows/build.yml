@@ -71,6 +71,10 @@ jobs:
       with:
         ref: ${{ inputs.ref }}
 
+    - name: Install Node
+      if: ${{ !matrix.use-cross }}
+      uses: actions/setup-node@v3
+
     - name: Read Emscripten version
       run: |
         echo "EMSCRIPTEN_VERSION=$(cat cli/emscripten-version)" >> $GITHUB_ENV
