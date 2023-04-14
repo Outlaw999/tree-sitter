@@ -67,7 +67,7 @@ jobs:
         echo "EMSCRIPTEN_VERSION=$(cat cli/emscripten-version)" >> $GITHUB_ENV
 
     - name: Install Emscripten
-      uses: mymindstorm/setup-emsdk@v12
+      uses: ahlinc/setup-emsdk@versioned-installer
       with:
         version: ${{ env.EMSCRIPTEN_VERSION }}
 
